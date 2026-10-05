@@ -330,15 +330,40 @@ const show = (id, on) => { $(id).hidden = !on; };
 function notice(msg){ const n = $("notice"); n.textContent = msg; n.hidden = !msg; }
 
 /* ---------- Conexión ---------- */
-const configured = !!firebaseConfig.databaseURL && !/PEGA_AQUI/.test(firebaseConfig.databaseURL) && !!window.firebase;
-let db = null, stateRef = null, playersRef = null, feedRef = null, TS = null;
-if (configured){
-  firebase.initializeApp(firebaseConfig);
-  db = firebase.database();
-  stateRef = db.ref(ROOT + "/state");
-  playersRef = db.ref(ROOT + "/players");
-  feedRef = db.ref(ROOT + "/feed");
-  TS = firebase.database.ServerValue.TIMESTAMP;
+const hasConfig = !!firebaseConfig.databaseURL && !/PEGA_AQUI/.test(firebaseConfig.databaseURL);
+let configured = false, db = null, stateRef = null, playersRef = null, feedRef = null, TS = null, loadError = "";
+function loadScript(src){
+  return new Promise((res, rej) => { const sc = document.createElement("script"); sc.src = src; sc.onload = res; sc.onerror = () => rej(new Error(src)); document.head.append(sc); });
+}
+async function ensureFirebase(){
+  if (window.firebase && window.firebase.database) return true;
+  const V = "10.12.2";
+  try {
+    await loadScript(`https://cdn.jsdelivr.net/npm/firebase@${V}/firebase-app-compat.js`);
+    await loadScript(`https://cdn.jsdelivr.net/npm/firebase@${V}/firebase-database-compat.js`);
+  } catch(e){}
+  return !!(window.firebase && window.firebase.database);
+}
+async function setupFirebase(){
+  if (!hasConfig){ loadError = "config"; return; }
+  if (!(await ensureFirebase())){ loadError = "sdk"; return; }
+  try {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.database();
+    stateRef = db.ref(ROOT + "/state");
+    playersRef = db.ref(ROOT + "/players");
+    feedRef = db.ref(ROOT + "/feed");
+    TS = firebase.database.ServerValue.TIMESTAMP;
+    configured = true;
+  } catch(e){ loadError = "init: " + (e && e.message || e); }
+}
+function errorText(){
+  if (loadError === "config") return "Falta la configuración de Firebase en el archivo (busca PEGA_AQUI).";
+  if (loadError === "sdk") return "No se pudo descargar Firebase. Revisa la conexión a internet o abre el juego desde su enlace publicado.";
+  return "Firebase no arrancó: " + loadError;
+}
+function watchPermission(ref){
+  ref.on("value", () => {}, err => notice("Firebase rechazó la conexión (" + (err && err.code || "error") + "). Revisa las reglas de Realtime Database."));
 }
 const isHost = /proyector/i.test(location.hash) || new URLSearchParams(location.search).has("proyector");
 const JOIN_URL = location.origin + location.pathname;
@@ -666,7 +691,8 @@ function resetRace(){
 function startHost(){
   show("player", false); show("host", true);
   buildHost();
-  if (!configured){ notice("Falta pegar la configuración de Firebase en el archivo (busca PEGA_AQUI)."); renderHost(); return; }
+  if (!configured){ notice(errorText()); renderHost(); return; }
+  watchPermission(stateRef);
   stateRef.once("value").then(snap => {
     const v = snap.val();
     if (v && v.phase){
@@ -682,7 +708,8 @@ function startHost(){
 function startPlayer(){
   show("host", false); show("player", true);
   buildPlayer();
-  if (!configured){ notice("Este juego aún no está conectado. Pídele a quien lo organiza que revise la configuración."); return; }
+  if (!configured){ notice(errorText()); return; }
+  watchPermission(stateRef);
   stateRef.on("value", s => { hostState = s.val(); playerSync(); });
   db.ref(".info/connected").on("value", s => {
     if (s.val() === true && joined){ myRef().child("online").onDisconnect().set(false); pushMe(true); }
@@ -691,7 +718,7 @@ function startPlayer(){
   if (me.name && me.fleet && F[me.fleet]) joinFleet(me.fleet);
 }
 
-if (isHost) startHost(); else startPlayer();
+setupFirebase().then(() => { if (isHost) startHost(); else startPlayer(); });
 })();
 </script>
 </body>
