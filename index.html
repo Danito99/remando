@@ -95,14 +95,33 @@ h1,h2{ font-family:var(--display); font-weight:400; letter-spacing:.01em; margin
 .lane-info .meta{ color:var(--muted); font-size:.95rem; }
 .lane-info .meta strong{ color:var(--foam); }
 .lane-info .warn{ color:var(--danger); }
-.water{ position:relative; height:clamp(70px,12vh,110px); border-radius:16px; overflow:hidden;
-  background:repeating-linear-gradient(100deg, rgba(255,255,255,.05) 0 18px, transparent 18px 44px), rgba(4,30,46,.45);
-  border:1px solid var(--line); }
+.water{ --bw:clamp(104px,11vw,156px); position:relative; height:clamp(92px,15vh,140px); border-radius:16px; overflow:hidden;
+  background:linear-gradient(180deg, rgba(4,30,46,.25), rgba(4,30,46,.6)); border:1px solid var(--line); }
+.water::before{ content:""; position:absolute; inset:0;
+  background:radial-gradient(16px 6px at 50% 100%, transparent 68%, rgba(255,255,255,.13) 70% 86%, transparent 88%) 0 0/52px 24px;
+  animation:drift 9s linear infinite; animation-play-state:paused; }
+.race.on .water::before{ animation-play-state:running; }
+@keyframes drift{ to{ background-position:-520px 0; } }
 .finish{ position:absolute; right:0; top:0; bottom:0; width:16px;
-  background:repeating-linear-gradient(0deg, #fff 0 8px, var(--ink) 8px 16px); opacity:.85; }
-.boat{ position:absolute; bottom:6%; height:84%; aspect-ratio:4/3; left:calc(var(--p,0) * (100% - 16px - 22%)); transition:left .35s ease-out; color:var(--c); }
-.boat svg{ width:100%; height:100%; animation:bob 1.6s ease-in-out infinite; }
-.lane.lead .water{ border-color:var(--c); box-shadow:inset 0 0 0 1px var(--c); }
+  background:repeating-linear-gradient(0deg, #fff 0 8px, var(--ink) 8px 16px); opacity:.9; z-index:2; }
+.buoy{ position:absolute; top:6px; bottom:6px; width:0; border-left:2px dashed rgba(255,255,255,.18);
+  left:calc(var(--at) * (100% - 16px - var(--bw)) + var(--bw)); }
+.buoy span{ position:absolute; top:0; left:6px; font-size:.75rem; color:var(--muted); }
+.boat{ position:absolute; bottom:4%; width:var(--bw); aspect-ratio:4/3; z-index:3; color:var(--c);
+  left:calc(var(--p,0) * (100% - 16px - var(--bw))); will-change:left; }
+.boat svg{ width:100%; height:100%; display:block; overflow:visible; animation:bob 2.4s ease-in-out infinite; transform-origin:50% 80%; }
+.lane.moving .boat svg{ animation:surge .7s ease-in-out infinite; }
+.wake{ position:absolute; right:78%; bottom:14%; height:16px; width:var(--wk,0px); border-radius:999px 0 0 999px;
+  background:linear-gradient(to left, rgba(255,255,255,.75), rgba(255,255,255,.25) 45%, transparent); transition:width .4s ease-out; }
+.wake::after{ content:""; position:absolute; right:0; bottom:10px; height:8px; width:60%; border-radius:999px 0 0 999px;
+  background:linear-gradient(to left, rgba(255,255,255,.45), transparent); }
+.pct{ position:absolute; top:-2px; left:50%; transform:translateX(-50%); font-family:var(--display); font-size:1rem; color:var(--foam);
+  text-shadow:0 2px 6px rgba(0,0,0,.5); }
+.oar{ stroke:#d6b47a; stroke-width:4; stroke-linecap:round; transform-box:fill-box; transform-origin:100% 0; }
+.lane.moving .oar{ animation:pull .7s ease-in-out infinite; }
+.lane.lead .water{ border-color:var(--c); box-shadow:inset 0 0 0 1px var(--c), 0 0 24px -6px var(--c); }
+@keyframes pull{ 0%,100%{ transform:rotate(-16deg) } 50%{ transform:rotate(18deg) } }
+@keyframes surge{ 0%,100%{ transform:translateY(0) rotate(-1.5deg) } 50%{ transform:translateY(-3px) rotate(2.5deg) } }
 @keyframes bob{ 0%,100%{ transform:translateY(0) rotate(-1deg) } 50%{ transform:translateY(-4px) rotate(1.5deg) } }
 
 .feed{ border-left:1px solid var(--line); padding-left:22px; min-height:0; overflow:hidden; display:flex; flex-direction:column; gap:10px; }
@@ -161,16 +180,24 @@ td .sw{ display:inline-block; width:12px; height:12px; border-radius:3px; backgr
 .ptaps strong{ color:var(--foam); font-family:var(--display); font-weight:400; font-size:1.6rem; }
 
 .layer{ position:absolute; inset:0; pointer-events:none; z-index:5; }
-.tempt{ position:absolute; pointer-events:auto; background:var(--card); color:var(--ink); border:0; border-radius:16px; padding:10px 14px;
-  display:flex; align-items:center; gap:10px; box-shadow:0 10px 28px rgba(0,0,0,.4); max-width:72vw; text-align:left;
-  animation:popin .35s cubic-bezier(.2,1.6,.4,1) both, wobble 1.2s ease-in-out .35s infinite; }
-.tempt .e{ font-size:2rem; line-height:1; }
-.tempt .t{ font-weight:800; font-size:1rem; line-height:1.15; }
-.tempt .cta{ display:inline-block; margin-top:4px; background:var(--ink); color:#fff; border-radius:999px; padding:2px 10px; font-size:.8rem; font-weight:600; }
-.tempt.out{ animation:popout .25s ease-in both; }
-@keyframes popin{ from{ transform:scale(.3) rotate(-8deg); opacity:0 } to{ transform:scale(1) rotate(var(--r)); opacity:1 } }
-@keyframes popout{ to{ transform:scale(.4); opacity:0 } }
-@keyframes wobble{ 0%,100%{ rotate:0deg } 50%{ rotate:2.5deg } }
+.tempt{ position:absolute; left:max(3%, calc(50% - 240px)); right:max(3%, calc(50% - 240px)); pointer-events:none;
+  background:var(--card); color:var(--ink); border:0; border-radius:20px; padding:16px; text-align:left;
+  display:grid; grid-template-columns:56px 1fr; gap:4px 14px; align-items:center; box-shadow:0 18px 40px rgba(0,0,0,.5); }
+.tempt.armed{ pointer-events:auto; }
+.tempt .e{ grid-row:1 / span 3; width:56px; height:56px; border-radius:14px; background:#eef3f5; display:grid; place-items:center; font-size:2.1rem; }
+.tempt .from{ font-size:.78rem; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:#5b7685; display:flex; justify-content:space-between; }
+.tempt .t{ font-weight:800; font-size:1.25rem; line-height:1.15; }
+.tempt .sub{ font-size:.95rem; color:#33505f; }
+.tempt .cta{ grid-column:1 / -1; margin-top:8px; background:var(--ink); color:#fff; border-radius:12px; padding:10px; text-align:center; font-weight:800; font-size:1rem; }
+.tempt.banner{ top:8px; animation:slidedown .35s ease-out both; }
+.tempt.sheet{ bottom:10px; animation:slideup .35s ease-out both; }
+.tempt.over{ top:var(--y); animation:popin .35s cubic-bezier(.2,1.5,.4,1) both, wobble 1.4s ease-in-out .35s infinite; }
+.tempt.out{ animation:popout .25s ease-in both !important; }
+@keyframes slidedown{ from{ transform:translateY(-130%) } to{ transform:none } }
+@keyframes slideup{ from{ transform:translateY(130%) } to{ transform:none } }
+@keyframes popin{ from{ transform:scale(.4); opacity:0 } to{ transform:scale(1) rotate(var(--r)); opacity:1 } }
+@keyframes popout{ to{ transform:scale(.6); opacity:0 } }
+@keyframes wobble{ 0%,100%{ rotate:0deg } 50%{ rotate:1.5deg } }
 
 .lock{ position:absolute; inset:0; z-index:10; display:grid; place-items:center; background:rgba(4,25,38,.82); padding:22px; }
 .lockcard{ background:var(--card); color:var(--ink); border-radius:22px; padding:24px; text-align:center; max-width:360px; }
@@ -178,6 +205,7 @@ td .sw{ display:inline-block; width:12px; height:12px; border-radius:3px; backgr
 .lockcard h2{ font-size:1.7rem; margin:6px 0; }
 .lockcard p{ margin:8px 0; font-size:1.05rem; }
 .lockcard .pen{ color:#b23b2d; font-weight:800; }
+.lockcard .moral{ font-style:italic; color:#4b6a79; }
 
 @media (prefers-reduced-motion: reduce){
   *{ animation:none !important; transition:none !important; }
@@ -198,9 +226,9 @@ td .sw{ display:inline-block; width:12px; height:12px; border-radius:3px; backgr
     <div class="controls">
       <label>Meta
         <select id="goalSel">
-          <option value="60">60 remadas por remero</option>
-          <option value="120" selected>120 remadas por remero</option>
-          <option value="200">200 remadas por remero</option>
+          <option value="250">Rápida: 250 remadas por remero</option>
+          <option value="400" selected>Normal: 400 remadas por remero</option>
+          <option value="600">Larga: 600 remadas por remero</option>
         </select>
       </label>
       <span class="clock" id="clock" hidden>0:00</span>
@@ -264,7 +292,8 @@ td .sw{ display:inline-block; width:12px; height:12px; border-radius:3px; backgr
         <div class="e" id="lockE"></div>
         <h2 id="lockT"></h2>
         <p id="lockX"></p>
-        <p class="pen">−10 remadas para tu flota</p>
+        <p class="moral">Moraleja: no deberías confiar en estas promesas.</p>
+        <p class="pen" id="lockP"></p>
         <p>Tu flota rema sin ti… <strong id="lockS">4</strong></p>
       </div>
     </div>
@@ -301,23 +330,22 @@ const FLEETS = [
   { id:"faro",   name:"Faro",   color:"#F7CB3D", motto:"Siempre alerta" }
 ];
 const F = Object.fromEntries(FLEETS.map(f => [f.id, f]));
-const PEN = 10, LOCK_MS = 4000;
+const PEN = 30, LOCK_MS = 5000;
 
 const TEMPT = [
-  {type:"tesoro", e:"🪙", t:"Cofre del tesoro", c:"Ábrelo", h:"¡Un cofre!", x:"Adentro había… un examen sin calificar. Feliz hallazgo."},
-  {type:"tesoro", e:"🗝️", t:"Llave dorada", c:"Tómala", h:"Llave dorada", x:"Abre el salón 3B. Que, por cierto, ya estaba abierto."},
-  {type:"tesoro", e:"💎", t:"Gema brillante", c:"Recógela", h:"¡Brilla!", x:"Era un clip de colores. Tu flota no te esperó."},
-  {type:"meme", e:"😂", t:"Meme docente", c:"Ver", h:"Meme del día", x:"“¿Alguna duda?” Silencio total. Suena el timbre: catorce manos arriba."},
-  {type:"meme", e:"🙃", t:"Meme nuevo en el grupo", c:"Ver", h:"Meme del día", x:"Yo: “Solo reviso un trabajo más”. También yo, a la 1 a. m., con 37 revisados."},
-  {type:"meme", e:"📎", t:"Reenviado muchas veces", c:"Abrir", h:"Cadena del grupo", x:"Reenvía esto a diez docentes o el proyector no prenderá el lunes."},
-  {type:"dulce", e:"🍬", t:"Dulce gratis", c:"Agarrar", h:"¡Mmm, dulce!", x:"Estaba rico. Tu flota siguió remando sin ti."},
-  {type:"dulce", e:"🍩", t:"Donas en la sala de maestros", c:"Ir", h:"Llegaste tarde", x:"Solo quedaba la de coco. Y tu flota ya avanzó."},
-  {type:"dulce", e:"☕", t:"Café recién hecho", c:"Servirme", h:"Café", x:"Delicioso. Lástima que el barco no se mueve con cafeína."},
-  {type:"aviso", e:"📩", t:"Mensaje de Dirección", c:"Leer", h:"Mensaje de Dirección", x:"“Recordatorio: no se distraigan durante la regata.” Ups."},
-  {type:"aviso", e:"🔔", t:"Se movió la junta", c:"Ver", h:"Notificación", x:"La junta del viernes sigue igual. Gracias por preguntar."},
-  {type:"chisme", e:"👀", t:"Chisme del recreo", c:"Enterarme", h:"Chisme del recreo", x:"Dicen que alguien de otra flota no se ha distraído ni una vez."}
+  {id:"guardia", e:"🛡️", from:"Coordinación", t:"Si das clic aquí, te quitamos un día de guardia", sub:"Solo para los primeros tres que confirmen.", c:"Confirmar exención", r:"Las guardias no se negocian. Mientras tanto, tu flota remó sin ti."},
+  {id:"horario", e:"🗓️", from:"Dirección académica", t:"Elige tu horario para el siguiente ciclo", sub:"Quedan 2 lugares con salida temprano.", c:"Elegir mi horario", r:"Ese horario no existe. Tu remo, sí."},
+  {id:"desayuno", e:"🥐", from:"Sala de maestros", t:"Desayuno gratis en la sala de maestros", sub:"Chilaquiles y café. Solo los primeros cinco.", c:"Voy para allá", r:"Solo quedaban servilletas."},
+  {id:"junta", e:"🚫", from:"Dirección", t:"Junta del viernes cancelada", sub:"Toca para ver el aviso completo.", c:"Ver aviso", r:"La junta sigue en pie. Tu barco ya no tanto."},
+  {id:"planeacion", e:"📄", from:"Coordinación", t:"Esta semana no entregas planeación", sub:"Activa tu exención antes de las 12:00.", c:"Activar", r:"Sí la entregas. Y tu flota perdió terreno."},
+  {id:"puente", e:"🏖️", from:"Calendario escolar", t:"Se aprobó un puente de cuatro días", sub:"Revisa las fechas antes de que se llene el hotel.", c:"Ver fechas", r:"Era el calendario del año pasado."},
+  {id:"grupos", e:"👥", from:"Dirección académica", t:"El próximo ciclo tendrás grupos de 15 alumnos", sub:"Confirma tu asignación.", c:"Confirmar", r:"Si suena demasiado bueno para ser verdad…"},
+  {id:"salida", e:"⏰", from:"Recursos humanos", t:"Hoy sales una hora antes", sub:"Registra tu salida anticipada aquí.", c:"Registrar salida", r:"Nadie sale antes. Ni tu barco, ahora."},
+  {id:"examenes", e:"✅", from:"Plataforma escolar", t:"Tus exámenes ya se calificaron solos", sub:"Revisa los resultados de tus grupos.", c:"Ver resultados", r:"Siguen en tu escritorio. Todos."},
+  {id:"cafetera", e:"☕", from:"Sala de maestros", t:"Llegó la cafetera nueva", sub:"El primer café es gratis.", c:"Servirme uno", r:"Sigue la cafetera de siempre."},
+  {id:"consejo", e:"🧑‍🏫", from:"Supervisión", t:"Este mes no hay Consejo Técnico", sub:"Confirma de enterado.", c:"Enterado", r:"Sí hay. Y te tocó exponer."},
+  {id:"copias", e:"🖨️", from:"Administración", t:"Copias ilimitadas sin vale esta semana", sub:"Activa tu código de impresión.", c:"Activar código", r:"La copiadora está atascada desde el lunes."}
 ];
-const VERB = { tesoro:"abrió un tesoro", meme:"se fue a ver un meme", dulce:"se fue por un dulce", aviso:"revisó una notificación", chisme:"se fue al chisme" };
 
 const $ = id => document.getElementById(id);
 const store = {
@@ -467,38 +495,46 @@ function stroke(){
   if (navigator.vibrate) { try { navigator.vibrate(8); } catch(e){} }
 }
 
-function startTempt(){ if (!temptTimer) scheduleTempt(800); }
+function startTempt(){ if (!temptTimer) scheduleTempt(1500); }
 function stopTempt(){ clearTimeout(temptTimer); temptTimer = null; $("layer").innerHTML = ""; }
-function scheduleTempt(delay){ temptTimer = setTimeout(spawnTempt, delay != null ? delay : 1600 + Math.random() * 2600); }
+function scheduleTempt(delay){ temptTimer = setTimeout(spawnTempt, delay != null ? delay : 1800 + Math.random() * 2200); }
+let lastTemptId = "";
 
 function spawnTempt(){
   temptTimer = null;
   if (pPhase !== "race") return;
   const layer = $("layer");
-  if (!locked && layer.children.length < 2){
-    const t = TEMPT[Math.floor(Math.random() * TEMPT.length)];
-    const b = el("button", "tempt");
-    b.style.setProperty("--r", (Math.random() * 10 - 5).toFixed(1) + "deg");
-    const top = Math.random() < .55 ? 13 + Math.random() * 18 : 74 + Math.random() * 12;
-    b.style.top = top + "%";
-    b.style.left = (3 + Math.random() * 38) + "%";
-    const txt = el("span"); txt.append(el("span", "t", t.t)); txt.append(document.createElement("br")); txt.append(el("span", "cta", t.c));
-    b.append(el("span", "e", t.e), txt);
+  const live = [...layer.children].filter(n => !n.classList.contains("out"));
+  if (!locked && live.length < 2){
+    const used = live.map(n => n.dataset.pos);
+    const spots = ["banner","over","sheet","over"].filter(p => !used.includes(p));
+    const pos = spots[Math.floor(Math.random() * spots.length)];
+    let t; do { t = TEMPT[Math.floor(Math.random() * TEMPT.length)]; } while (t.id === lastTemptId && TEMPT.length > 1);
+    lastTemptId = t.id;
+    const b = el("button", "tempt " + pos);
+    b.dataset.pos = pos;
+    b.style.setProperty("--r", (Math.random() * 6 - 3).toFixed(1) + "deg");
+    if (pos === "over") b.style.setProperty("--y", (34 + Math.random() * 22).toFixed(1) + "%");
+    const from = el("span", "from"); from.append(el("span", null, t.from), el("span", null, "ahora"));
+    b.append(el("span", "e", t.e), from, el("span", "t", t.t), el("span", "sub", t.sub), el("span", "cta", t.c));
     let gone = false;
-    const remove = () => { if (gone) return; gone = true; b.classList.add("out"); setTimeout(() => b.remove(), 250); };
+    const remove = () => { if (gone) return; gone = true; b.classList.add("out"); setTimeout(() => b.remove(), 260); };
     b.addEventListener("pointerdown", e => { e.preventDefault(); if (gone) return; gone = true; b.remove(); openTempt(t); });
     layer.append(b);
+    setTimeout(() => b.classList.add("armed"), 450); // evita "caer" por un toque que ya venía en camino
     me.seen++; pushMe();
-    setTimeout(remove, 2600 + Math.random() * 1200);
+    setTimeout(remove, 3400 + Math.random() * 1600);
   }
   scheduleTempt();
 }
 
 function openTempt(t){
   me.opened++; updateTaps(); pushMe(true);
-  if (feedRef) feedRef.push({ name:me.name, fleet:me.fleet, type:t.type, raceId:me.raceId || "", t:TS }).catch(() => {});
+  if (feedRef) feedRef.push({ name:me.name, fleet:me.fleet, type:t.id, raceId:me.raceId || "", t:TS }).catch(() => {});
   locked = true; $("rowBtn").disabled = true;
-  $("lockE").textContent = t.e; $("lockT").textContent = t.h; $("lockX").textContent = t.x;
+  [...$("layer").children].forEach(n => n.remove());
+  $("lockE").textContent = t.e; $("lockT").textContent = "¡Caíste!"; $("lockX").textContent = t.r;
+  $("lockP").textContent = `−${PEN} remadas para tu flota`;
   show("lock", true);
   let s = Math.round(LOCK_MS / 1000); $("lockS").textContent = s;
   const iv = setInterval(() => { s--; $("lockS").textContent = Math.max(s, 0); }, 1000);
@@ -506,8 +542,28 @@ function openTempt(t){
 }
 
 /* =================== HOST =================== */
-const H = { phase:"lobby", raceId:"", goal:120, winner:"", startedAt:0 };
+const H = { phase:"lobby", raceId:"", goal:400, winner:"", startedAt:0 };
 let playersData = {}, feedData = [], clockIv = null, renderQueued = false;
+const disp = {}, vel = {}, target = {};
+FLEETS.forEach(f => { disp[f.id] = 0; vel[f.id] = 0; target[f.id] = 0; });
+const reduceMotion = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+let lastFrame = 0;
+function animLoop(now){
+  const dt = lastFrame ? Math.min(.1, (now - lastFrame) / 1000) : .016; lastFrame = now;
+  FLEETS.forEach(f => {
+    const id = f.id, prev = disp[id];
+    if (reduceMotion) disp[id] = target[id];
+    else { disp[id] += (target[id] - disp[id]) * Math.min(1, dt * 2.6); if (Math.abs(target[id] - disp[id]) < .0004) disp[id] = target[id]; }
+    const v = Math.max(0, (disp[id] - prev) / dt);
+    vel[id] += (v - vel[id]) * Math.min(1, dt * 3);
+    const b = $("bt-" + id); if (!b) return;
+    b.style.setProperty("--p", disp[id].toFixed(4));
+    b.style.setProperty("--wk", Math.min(200, vel[id] * 7000).toFixed(0) + "px");
+    $("ln-" + id).classList.toggle("moving", vel[id] > .002);
+    $("pc-" + id).textContent = Math.round(disp[id] * 100) + " %";
+  });
+  requestAnimationFrame(animLoop);
+}
 
 function pushHost(){ if (stateRef) stateRef.set({ ...H, epoch:TS }).catch(() => {}); }
 
@@ -527,12 +583,21 @@ function buildHost(){
     const meta = el("div", "meta"); meta.id = "lm-" + f.id;
     info.append(top, meta);
     const water = el("div", "water"); water.append(el("div", "finish"));
+    [.25,.5,.75].forEach(at => { const bu = el("div", "buoy"); bu.style.setProperty("--at", at); bu.append(el("span", null, Math.round(at*100) + " %")); water.append(bu); });
     const boat = el("div", "boat"); boat.id = "bt-" + f.id;
-    boat.innerHTML = '<svg viewBox="0 0 80 60" aria-hidden="true"><line x1="40" y1="6" x2="40" y2="40" stroke="#3a2a1c" stroke-width="3"/><path d="M43 8 L68 38 H43 Z" fill="currentColor" stroke="#3a2a1c" stroke-width="1.5"/><path d="M37 13 L17 38 H37 Z" fill="currentColor" opacity=".75" stroke="#3a2a1c" stroke-width="1.5"/><path d="M4 41 H76 L66 55 H14 Z" fill="#5a3a22" stroke="#2b1b10" stroke-width="2"/><path d="M20 47 L8 58 M60 47 L72 58" stroke="#c9a46a" stroke-width="3" stroke-linecap="round"/></svg>';
+    const emblem = ICONS[f.id].replace("<svg ", '<svg x="70" y="28" width="22" height="22" color="#062234" ');
+    boat.innerHTML = '<div class="wake"></div><span class="pct" id="pc-' + f.id + '">0 %</span>' +
+      '<svg viewBox="0 0 120 90" aria-hidden="true">' +
+      '<line class="oar" x1="48" y1="66" x2="30" y2="92"/><line class="oar" x1="84" y1="66" x2="66" y2="92"/>' +
+      '<line x1="60" y1="8" x2="60" y2="62" stroke="#3a2a1c" stroke-width="3.5"/>' +
+      '<path d="M63 10 Q92 34 98 60 H63 Z" fill="currentColor" stroke="#2b1b10" stroke-width="1.5"/>' +
+      '<path d="M57 16 Q36 40 28 60 H57 Z" fill="currentColor" opacity=".78" stroke="#2b1b10" stroke-width="1.5"/>' + emblem +
+      '<path d="M4 62 H116 L102 84 H20 Z" fill="#5a3a22" stroke="#2b1b10" stroke-width="2"/>' +
+      '<path d="M9 66 H111 L109 70 H11 Z" fill="currentColor"/></svg>';
     water.append(boat);
     lane.append(info, water); lanes.append(lane);
   });
-  $("goalSel").addEventListener("change", e => { H.goal = parseInt(e.target.value, 10) || 120; pushHost(); queueRender(); });
+  $("goalSel").addEventListener("change", e => { H.goal = parseInt(e.target.value, 10) || 400; pushHost(); queueRender(); });
   $("startBtn").addEventListener("click", startRace);
   $("endBtn").addEventListener("click", finishRace);
   $("resetBtn").addEventListener("click", resetRace);
@@ -578,6 +643,8 @@ function queueRender(){ if (renderQueued) return; renderQueued = true; requestAn
 function renderHost(){
   const ph = H.phase;
   show("lobby", ph === "lobby"); show("race", ph !== "lobby");
+  $("race").classList.toggle("on", ph === "race");
+  if (ph === "lobby") FLEETS.forEach(f => { target[f.id] = 0; disp[f.id] = 0; vel[f.id] = 0; });
   show("startBtn", ph === "lobby"); show("clearBtn", ph === "lobby");
   show("endBtn", ph === "race"); show("resetBtn", ph === "end" || ph === "race");
   $("goalSel").value = String(H.goal); $("goalSel").disabled = ph !== "lobby";
@@ -601,7 +668,7 @@ function renderHost(){
   $("hostSub").textContent = ph === "race" ? "Gana la flota que más rema y menos se distrae." : ph === "countdown" ? "Prepárense…" : "Regata terminada.";
   const lead = Math.max(...S.map(s => s.progress));
   S.forEach(s => {
-    $("bt-" + s.f.id).style.setProperty("--p", s.progress.toFixed(4));
+    target[s.f.id] = s.progress;
     $("ln-" + s.f.id).classList.toggle("lead", lead > 0 && s.progress === lead);
     const m = $("lm-" + s.f.id); m.innerHTML = "";
     m.append(el("strong", null, s.members), ` remero${s.members === 1 ? "" : "s"}, `, el("strong", null, s.score), " remadas");
@@ -611,10 +678,11 @@ function renderHost(){
   const items = feedData.filter(it => it.raceId === H.raceId && F[it.fleet]).slice(-12).reverse();
   if (!items.length) fl.append(el("li", "empty", ph === "race" ? "Nadie ha caído en la tentación… todavía." : "Sin tentaciones."));
   items.forEach(it => {
-    const t = TEMPT.find(x => x.type === it.type) || TEMPT[0];
+    const t = TEMPT.find(x => x.id === it.type);
+    if (!t) return;
     const li = el("li"); li.style.setProperty("--c", F[it.fleet].color);
     li.append(el("span", "e", t.e));
-    const tx = el("span"); tx.append(el("span", "who", String(it.name).slice(0,24)), ` (${F[it.fleet].name}) ${VERB[it.type] || "se distrajo"}`);
+    const tx = el("span"); tx.append(el("span", "who", String(it.name).slice(0,24)), ` (${F[it.fleet].name}) creyó en «${t.t}»`);
     li.append(tx); fl.append(li);
   });
   if (ph === "race" && S.some(s => s.progress >= 1)) finishRace();
@@ -691,12 +759,13 @@ function resetRace(){
 function startHost(){
   show("player", false); show("host", true);
   buildHost();
+  requestAnimationFrame(animLoop);
   if (!configured){ notice(errorText()); renderHost(); return; }
   watchPermission(stateRef);
   stateRef.once("value").then(snap => {
     const v = snap.val();
     if (v && v.phase){
-      H.phase = v.phase === "countdown" ? "lobby" : v.phase; H.raceId = v.raceId || ""; H.goal = v.goal || 120; H.winner = v.winner || ""; H.startedAt = v.startedAt || 0;
+      H.phase = v.phase === "countdown" ? "lobby" : v.phase; H.raceId = v.raceId || ""; H.goal = v.goal || 400; H.winner = v.winner || ""; H.startedAt = v.startedAt || 0;
       if (H.phase === "race") startClock();
     }
     pushHost(); queueRender();
