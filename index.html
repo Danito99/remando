@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Regata de la atención</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Figtree:wght@400;600;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<style>
+:root{
+  --sea:#0f5374; --deep:#093a54; --foam:#eaf5f7; --muted:#a9cbd6; --ink:#062234;
+  --sand:#f3e6c4; --line:rgba(234,245,247,.2); --card:#ffffff; --danger:#ff7a6b;
+  --display:"Alfa Slab One", Rockwell, "Roboto Slab", Georgia, serif;
+  --body:"Figtree", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){ --sea:#0a3d58; --deep:#06293d; --foam:#e3f0f3; --muted:#8fb4c1; --line:rgba(227,240,243,.16); --card:#f6f9fa; }
+}
+:root[data-theme="dark"]{ --sea:#0a3d58; --deep:#06293d; --foam:#e3f0f3; --muted:#8fb4c1; --line:rgba(227,240,243,.16); --card:#f6f9fa; }
+:root{ box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px); }
+*,*::before,*::after{ box-sizing:inherit; }
+html{ height:100%; scroll-padding-top:env(safe-area-inset-top,0px); }
+body{
+  height:100%; margin:0; color:var(--foam); font-family:var(--body);
+  background:
+    radial-gradient(120% 60% at 50% -10%, rgba(255,255,255,.08), transparent 60%),
+    repeating-radial-gradient(circle at 20% 120%, transparent 0 22px, rgba(255,255,255,.035) 22px 24px),
+    linear-gradient(180deg, var(--sea), var(--deep));
+  background-color:var(--deep);
+  -webkit-tap-highlight-color:transparent;
+}
+[hidden]{ display:none !important; }
+button{ font:inherit; cursor:pointer; }
+button:focus-visible, input:focus-visible, select:focus-visible{ outline:3px solid var(--sand); outline-offset:3px; }
+h1,h2{ font-family:var(--display); font-weight:400; letter-spacing:.01em; margin:0; }
+.icon svg{ width:100%; height:100%; display:block; }
+.notice{ position:fixed; left:50%; bottom:calc(14px + env(safe-area-inset-bottom,0px)); transform:translateX(-50%); background:var(--card); color:var(--ink); padding:10px 16px; border-radius:12px; max-width:min(92vw,520px); font-size:.92rem; z-index:50; box-shadow:0 8px 30px rgba(0,0,0,.35); }
+
+/* ---------- Choose ---------- */
+.choose{ min-height:100%; display:grid; place-content:center; gap:22px; padding:24px; text-align:center; }
+.choose h1{ font-size:clamp(2rem,6vw,3.4rem); }
+.choose .opts{ display:flex; flex-wrap:wrap; gap:14px; justify-content:center; }
+.big{ background:var(--sand); color:var(--ink); border:0; border-radius:14px; padding:16px 26px; font-weight:800; font-size:1.1rem; }
+.ghost{ background:transparent; color:var(--foam); border:2px solid var(--line); border-radius:14px; padding:14px 24px; font-weight:600; }
+
+/* ---------- Host / projector ---------- */
+.host{ height:100%; display:grid; grid-template-rows:auto 1fr; }
+.bar{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px 24px; padding:18px 28px; border-bottom:1px solid var(--line); }
+.bar h1{ font-size:clamp(1.6rem,3.2vw,2.6rem); line-height:1; }
+.bar p{ margin:6px 0 0; color:var(--muted); font-size:1.05rem; }
+.controls{ display:flex; flex-wrap:wrap; align-items:center; gap:10px; }
+.controls label{ color:var(--muted); font-size:.95rem; display:flex; gap:8px; align-items:center; }
+.controls select{ font:inherit; padding:8px 10px; border-radius:10px; border:1px solid var(--line); background:var(--deep); color:var(--foam); }
+.clock{ font-family:var(--display); font-size:1.6rem; min-width:4.5ch; text-align:right; }
+.btn{ border:0; border-radius:12px; padding:11px 18px; font-weight:800; }
+.btn.go{ background:var(--sand); color:var(--ink); }
+.btn.alt{ background:transparent; color:var(--foam); border:2px solid var(--line); }
+
+.lobby{ display:grid; grid-template-columns:minmax(260px,340px) 1fr; gap:28px; padding:26px 28px; min-height:0; }
+@media (max-width:860px){ .lobby{ grid-template-columns:1fr; } }
+.qrbox{ background:var(--card); color:var(--ink); border-radius:22px; padding:22px; display:flex; flex-direction:column; align-items:center; gap:12px; align-self:start; }
+.qrbox h2{ font-size:1.6rem; }
+#qr{ width:min(280px,70vw); aspect-ratio:1; display:grid; place-items:center; }
+#qr img, #qr canvas{ width:100% !important; height:auto !important; }
+.qrbox .hint{ margin:0; text-align:center; color:#2c4a5c; font-size:.98rem; }
+.urlfix{ display:flex; flex-direction:column; gap:8px; width:100%; }
+.urlfix input{ font:inherit; padding:10px; border-radius:10px; border:1px solid #b9cdd6; width:100%; }
+.linkbtn{ background:none; border:0; color:#2c6a87; text-decoration:underline; padding:4px; font-size:.9rem; }
+
+.crews{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; min-height:0; }
+@media (max-width:1100px){ .crews{ grid-template-columns:repeat(2,minmax(0,1fr)); } }
+.crew{ border:2px solid var(--line); border-top:8px solid var(--c); border-radius:18px; padding:16px; display:flex; flex-direction:column; gap:12px; background:rgba(6,34,52,.25); min-height:220px; }
+.crew-head{ display:flex; align-items:center; gap:10px; }
+.crew-head .icon{ width:36px; height:36px; color:var(--c); }
+.crew-head h2{ font-size:1.7rem; }
+.crew-head .n{ margin-left:auto; font-family:var(--display); font-size:2rem; color:var(--c); }
+.chips{ display:flex; flex-wrap:wrap; gap:6px; align-content:flex-start; }
+.chip{ background:var(--c); color:var(--ink); border-radius:999px; padding:5px 11px; font-weight:600; font-size:.95rem; animation:hop .5s ease-out; }
+.empty{ color:var(--muted); font-size:.95rem; margin:0; }
+@keyframes hop{ 0%{ transform:translateY(10px) scale(.8); opacity:0 } 100%{ transform:none; opacity:1 } }
+
+.race{ display:grid; grid-template-columns:1fr minmax(240px,320px); gap:24px; padding:22px 28px; min-height:0; }
+@media (max-width:980px){ .race{ grid-template-columns:1fr; } }
+.lanes{ display:flex; flex-direction:column; gap:14px; justify-content:center; }
+.lane{ display:grid; grid-template-columns:200px 1fr; gap:14px; align-items:center; }
+@media (max-width:700px){ .lane{ grid-template-columns:1fr; } }
+.lane-info{ display:flex; flex-direction:column; gap:2px; }
+.lane-info .top{ display:flex; align-items:center; gap:8px; }
+.lane-info .icon{ width:28px; height:28px; color:var(--c); }
+.lane-info b{ font-family:var(--display); font-weight:400; font-size:1.5rem; }
+.lane-info .meta{ color:var(--muted); font-size:.95rem; }
+.lane-info .meta strong{ color:var(--foam); }
+.lane-info .warn{ color:var(--danger); }
+.water{ position:relative; height:clamp(70px,12vh,110px); border-radius:16px; overflow:hidden;
+  background:repeating-linear-gradient(100deg, rgba(255,255,255,.05) 0 18px, transparent 18px 44px), rgba(4,30,46,.45);
+  border:1px solid var(--line); }
+.finish{ position:absolute; right:0; top:0; bottom:0; width:16px;
+  background:repeating-linear-gradient(0deg, #fff 0 8px, var(--ink) 8px 16px); opacity:.85; }
+.boat{ position:absolute; bottom:6%; height:84%; aspect-ratio:4/3; left:calc(var(--p,0) * (100% - 16px - 22%)); transition:left .35s ease-out; color:var(--c); }
+.boat svg{ width:100%; height:100%; animation:bob 1.6s ease-in-out infinite; }
+.lane.lead .water{ border-color:var(--c); box-shadow:inset 0 0 0 1px var(--c); }
+@keyframes bob{ 0%,100%{ transform:translateY(0) rotate(-1deg) } 50%{ transform:translateY(-4px) rotate(1.5deg) } }
+
+.feed{ border-left:1px solid var(--line); padding-left:22px; min-height:0; overflow:hidden; display:flex; flex-direction:column; gap:10px; }
+@media (max-width:980px){ .feed{ border-left:0; padding-left:0; border-top:1px solid var(--line); padding-top:14px; } }
+.feed h2{ font-size:1.3rem; }
+.feed ol{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; overflow:hidden; }
+.feed li{ display:flex; gap:10px; align-items:baseline; font-size:1.02rem; animation:hop .4s ease-out; }
+.feed li .who{ font-weight:800; color:var(--c); }
+.feed li .e{ font-size:1.3rem; }
+.feed .empty{ font-size:1rem; }
+
+.count{ position:fixed; inset:0; display:grid; place-items:center; background:rgba(4,25,38,.72); z-index:20; }
+.count span{ font-family:var(--display); font-size:min(38vw,320px); color:var(--sand); animation:hop .5s ease-out; }
+
+.podium{ position:fixed; inset:0; z-index:15; display:grid; place-items:center; background:rgba(4,25,38,.8); padding:24px; }
+.podium-card{ background:var(--card); color:var(--ink); border-radius:26px; padding:30px 34px; width:min(820px,100%); max-height:100%; overflow:auto; border-top:14px solid var(--c); }
+.podium-card h2{ font-size:clamp(2rem,5vw,3.4rem); line-height:1.05; }
+.podium-card .sub{ color:#3b5868; margin:10px 0 18px; font-size:1.15rem; }
+.tablewrap{ overflow-x:auto; }
+table{ width:100%; border-collapse:collapse; font-size:1.08rem; }
+th,td{ text-align:left; padding:10px 8px; border-bottom:1px solid #d7e3e8; white-space:nowrap; }
+th{ font-weight:600; color:#4b6a79; font-size:.95rem; }
+td .sw{ display:inline-block; width:12px; height:12px; border-radius:3px; background:var(--c); margin-right:8px; vertical-align:middle; outline:1px solid rgba(0,0,0,.2); }
+.podium-card .acts{ display:flex; gap:10px; margin-top:20px; flex-wrap:wrap; }
+.podium-card .btn.alt{ color:var(--ink); border-color:#c3d4dc; }
+
+/* ---------- Player / phone ---------- */
+.player{ height:100%; }
+.pjoin{ min-height:100%; padding:24px 20px; display:flex; flex-direction:column; gap:16px; max-width:520px; margin:0 auto; }
+.pjoin h1{ font-size:2.1rem; line-height:1.05; }
+.pjoin p{ margin:0; color:var(--muted); }
+.pjoin label{ display:flex; flex-direction:column; gap:6px; font-weight:600; }
+.pjoin input{ font:inherit; font-size:1.15rem; padding:14px; border-radius:14px; border:2px solid var(--line); background:rgba(4,30,46,.4); color:var(--foam); }
+.pjoin input.need{ border-color:var(--danger); }
+.fleetpick{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.fleetbtn{ border:0; border-radius:18px; padding:18px 12px; background:var(--c); color:var(--ink); display:flex; flex-direction:column; align-items:center; gap:8px; font-family:var(--display); font-size:1.4rem; }
+.fleetbtn .icon{ width:40px; height:40px; }
+.fleetbtn small{ font-family:var(--body); font-size:.85rem; font-weight:600; opacity:.8; }
+
+.pgame{ position:relative; height:100%; display:grid; grid-template-rows:auto auto 1fr; overflow:hidden; touch-action:manipulation; user-select:none; -webkit-user-select:none; }
+.ptop{ display:flex; align-items:center; gap:10px; padding:14px 18px; border-bottom:1px solid var(--line); }
+.ptop .icon{ width:26px; height:26px; color:var(--c); }
+.ptop b{ font-family:var(--display); font-weight:400; font-size:1.3rem; color:var(--c); }
+.ptop .nm{ color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ptop .linkbtn{ margin-left:auto; color:var(--muted); }
+.pstatus{ text-align:center; padding:14px 18px 0; font-size:1.15rem; font-weight:600; min-height:3.2em; }
+.pstatus .huge{ display:block; font-family:var(--display); font-size:3.4rem; color:var(--sand); }
+.rowwrap{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; padding-bottom:12vh; }
+.row{ width:min(66vw,320px); aspect-ratio:1; border-radius:50%; border:0; background:var(--c); color:var(--ink);
+  font-family:var(--display); font-size:2.4rem; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;
+  box-shadow:0 10px 0 rgba(0,0,0,.28), 0 0 0 10px rgba(255,255,255,.08); transition:transform .06s; touch-action:manipulation; }
+.row .icon{ width:54px; height:54px; }
+.row.hit{ transform:translateY(6px) scale(.97); box-shadow:0 4px 0 rgba(0,0,0,.28), 0 0 0 14px rgba(255,255,255,.12); }
+.row:disabled{ filter:grayscale(.75) brightness(.7); box-shadow:0 4px 0 rgba(0,0,0,.28); }
+.ptaps{ color:var(--muted); font-size:1rem; text-align:center; }
+.ptaps strong{ color:var(--foam); font-family:var(--display); font-weight:400; font-size:1.6rem; }
+
+.layer{ position:absolute; inset:0; pointer-events:none; z-index:5; }
+.tempt{ position:absolute; pointer-events:auto; background:var(--card); color:var(--ink); border:0; border-radius:16px; padding:10px 14px;
+  display:flex; align-items:center; gap:10px; box-shadow:0 10px 28px rgba(0,0,0,.4); max-width:72vw; text-align:left;
+  animation:popin .35s cubic-bezier(.2,1.6,.4,1) both, wobble 1.2s ease-in-out .35s infinite; }
+.tempt .e{ font-size:2rem; line-height:1; }
+.tempt .t{ font-weight:800; font-size:1rem; line-height:1.15; }
+.tempt .cta{ display:inline-block; margin-top:4px; background:var(--ink); color:#fff; border-radius:999px; padding:2px 10px; font-size:.8rem; font-weight:600; }
+.tempt.out{ animation:popout .25s ease-in both; }
+@keyframes popin{ from{ transform:scale(.3) rotate(-8deg); opacity:0 } to{ transform:scale(1) rotate(var(--r)); opacity:1 } }
+@keyframes popout{ to{ transform:scale(.4); opacity:0 } }
+@keyframes wobble{ 0%,100%{ rotate:0deg } 50%{ rotate:2.5deg } }
+
+.lock{ position:absolute; inset:0; z-index:10; display:grid; place-items:center; background:rgba(4,25,38,.82); padding:22px; }
+.lockcard{ background:var(--card); color:var(--ink); border-radius:22px; padding:24px; text-align:center; max-width:360px; }
+.lockcard .e{ font-size:3.4rem; }
+.lockcard h2{ font-size:1.7rem; margin:6px 0; }
+.lockcard p{ margin:8px 0; font-size:1.05rem; }
+.lockcard .pen{ color:#b23b2d; font-weight:800; }
+
+@media (prefers-reduced-motion: reduce){
+  *{ animation:none !important; transition:none !important; }
+}
+</style>
+</head>
+<body>
+
+<div id="notice" class="notice" hidden></div>
+
+<!-- Proyector -->
+<section id="host" class="host" hidden>
+  <header class="bar">
+    <div>
+      <h1>Regata de la atención</h1>
+      <p id="hostSub">Escanea el código, elige tu flota y espera la señal.</p>
+    </div>
+    <div class="controls">
+      <label>Meta
+        <select id="goalSel">
+          <option value="60">60 remadas por remero</option>
+          <option value="120" selected>120 remadas por remero</option>
+          <option value="200">200 remadas por remero</option>
+        </select>
+      </label>
+      <span class="clock" id="clock" hidden>0:00</span>
+      <button class="btn go" id="startBtn">Zarpar</button>
+      <button class="btn alt" id="endBtn" hidden>Terminar regata</button>
+      <button class="btn alt" id="resetBtn" hidden>Volver al muelle</button>
+      <button class="btn alt" id="clearBtn">Vaciar flotas</button>
+    </div>
+  </header>
+
+  <div id="lobby" class="lobby">
+    <div class="qrbox">
+      <h2>Súbete al barco</h2>
+      <div id="qr"></div>
+      <p class="hint" id="qrHint">Escanea con la cámara del celular</p>
+      <div class="urlfix" id="urlFix" hidden>
+        <input id="urlInput" type="url" placeholder="Pega aquí el enlace de esta página">
+        <button class="btn go" id="urlBtn">Crear código QR</button>
+      </div>
+      <button class="linkbtn" id="editUrl" hidden>Cambiar enlace</button>
+    </div>
+    <div class="crews" id="crews"></div>
+  </div>
+
+  <div id="race" class="race" hidden>
+    <div class="lanes" id="lanes"></div>
+    <aside class="feed">
+      <h2>Bitácora de tentaciones</h2>
+      <ol id="feed"></ol>
+    </aside>
+  </div>
+</section>
+<div id="count" class="count" hidden><span id="countN">3</span></div>
+<div id="podium" class="podium" hidden></div>
+
+<!-- Celular -->
+<section id="player" class="player" hidden>
+  <div id="pJoin" class="pjoin">
+    <h1>Regata de la atención</h1>
+    <p>Rema con tu flota. Ignora todo lo demás.</p>
+    <label>Tu nombre
+      <input id="nameIn" maxlength="24" autocomplete="given-name" placeholder="Ej. Maestra Lupita">
+    </label>
+    <p>Elige tu flota</p>
+    <div class="fleetpick" id="fleetPick"></div>
+  </div>
+
+  <div id="pGame" class="pgame" hidden>
+    <header class="ptop">
+      <span class="icon" id="pIcon"></span><b id="pFleet"></b><span class="nm" id="pName"></span>
+      <button class="linkbtn" id="changeBtn">Cambiar</button>
+    </header>
+    <div class="pstatus" id="pStatus">Buscando el proyector…</div>
+    <div class="rowwrap">
+      <button class="row" id="rowBtn" disabled><span class="icon" id="rowIcon"></span>Remar</button>
+      <div class="ptaps"><strong id="pTaps">0</strong> remadas<span id="pOpened"></span></div>
+    </div>
+    <div class="layer" id="layer"></div>
+    <div class="lock" id="lock" hidden>
+      <div class="lockcard">
+        <div class="e" id="lockE"></div>
+        <h2 id="lockT"></h2>
+        <p id="lockX"></p>
+        <p class="pen">−10 remadas para tu flota</p>
+        <p>Tu flota rema sin ti… <strong id="lockS">4</strong></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+(() => {
+"use strict";
+
+/* ============ 1) PEGA AQUÍ LA CONFIGURACIÓN DE TU PROYECTO FIREBASE ============ */
+const firebaseConfig = {
+  apiKey: "PEGA_AQUI",
+  authDomain: "PEGA_AQUI",
+  databaseURL: "PEGA_AQUI",
+  projectId: "PEGA_AQUI",
+  appId: "PEGA_AQUI"
+};
+/* Nombre de la sala (cámbialo si quieres correr dos regatas a la vez) */
+const ROOT = "regata";
+/* ================================================================================ */
+
+const ICONS = {
+  anchor:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2"/><path d="M12 7v14M8 11h8M4 14a8 8 0 0 0 16 0"/></svg>',
+  timon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="1.6"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/></svg>',
+  vela:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v14M12 4l7 12h-7M5 18h14l-2 3H7z"/></svg>',
+  faro:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21l1.5-12h3L15 21zM9.5 9h5M10 6h4l-2-3zM3 5l4 1.5M21 5l-4 1.5M6 21h12"/></svg>',
+  oar:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l9-9"/><path d="M13 11c1-3 4-6 6.5-6.5.5 2.5-3.5 5.5-6.5 6.5z"/></svg>'
+};
+const FLEETS = [
+  { id:"anchor", name:"Anchor", color:"#9CC8EC", motto:"Firmes" },
+  { id:"timon",  name:"Timón",  color:"#F4925A", motto:"Con rumbo" },
+  { id:"vela",   name:"Vela",   color:"#F3EAD3", motto:"A favor del viento" },
+  { id:"faro",   name:"Faro",   color:"#F7CB3D", motto:"Siempre alerta" }
+];
+const F = Object.fromEntries(FLEETS.map(f => [f.id, f]));
+const PEN = 10, LOCK_MS = 4000;
+
+const TEMPT = [
+  {type:"tesoro", e:"🪙", t:"Cofre del tesoro", c:"Ábrelo", h:"¡Un cofre!", x:"Adentro había… un examen sin calificar. Feliz hallazgo."},
+  {type:"tesoro", e:"🗝️", t:"Llave dorada", c:"Tómala", h:"Llave dorada", x:"Abre el salón 3B. Que, por cierto, ya estaba abierto."},
+  {type:"tesoro", e:"💎", t:"Gema brillante", c:"Recógela", h:"¡Brilla!", x:"Era un clip de colores. Tu flota no te esperó."},
+  {type:"meme", e:"😂", t:"Meme docente", c:"Ver", h:"Meme del día", x:"“¿Alguna duda?” Silencio total. Suena el timbre: catorce manos arriba."},
+  {type:"meme", e:"🙃", t:"Meme nuevo en el grupo", c:"Ver", h:"Meme del día", x:"Yo: “Solo reviso un trabajo más”. También yo, a la 1 a. m., con 37 revisados."},
+  {type:"meme", e:"📎", t:"Reenviado muchas veces", c:"Abrir", h:"Cadena del grupo", x:"Reenvía esto a diez docentes o el proyector no prenderá el lunes."},
+  {type:"dulce", e:"🍬", t:"Dulce gratis", c:"Agarrar", h:"¡Mmm, dulce!", x:"Estaba rico. Tu flota siguió remando sin ti."},
+  {type:"dulce", e:"🍩", t:"Donas en la sala de maestros", c:"Ir", h:"Llegaste tarde", x:"Solo quedaba la de coco. Y tu flota ya avanzó."},
+  {type:"dulce", e:"☕", t:"Café recién hecho", c:"Servirme", h:"Café", x:"Delicioso. Lástima que el barco no se mueve con cafeína."},
+  {type:"aviso", e:"📩", t:"Mensaje de Dirección", c:"Leer", h:"Mensaje de Dirección", x:"“Recordatorio: no se distraigan durante la regata.” Ups."},
+  {type:"aviso", e:"🔔", t:"Se movió la junta", c:"Ver", h:"Notificación", x:"La junta del viernes sigue igual. Gracias por preguntar."},
+  {type:"chisme", e:"👀", t:"Chisme del recreo", c:"Enterarme", h:"Chisme del recreo", x:"Dicen que alguien de otra flota no se ha distraído ni una vez."}
+];
+const VERB = { tesoro:"abrió un tesoro", meme:"se fue a ver un meme", dulce:"se fue por un dulce", aviso:"revisó una notificación", chisme:"se fue al chisme" };
+
+const $ = id => document.getElementById(id);
+const store = {
+  get(k){ try { return localStorage.getItem(k); } catch(e){ return null; } },
+  set(k,v){ try { localStorage.setItem(k,v); } catch(e){} }
+};
+const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+const num = v => (typeof v === "number" && isFinite(v) && v >= 0) ? Math.floor(v) : 0;
+const show = (id, on) => { $(id).hidden = !on; };
+function notice(msg){ const n = $("notice"); n.textContent = msg; n.hidden = !msg; }
+
+/* ---------- Conexión ---------- */
+const configured = !!firebaseConfig.databaseURL && !/PEGA_AQUI/.test(firebaseConfig.databaseURL) && !!window.firebase;
+let db = null, stateRef = null, playersRef = null, feedRef = null, TS = null;
+if (configured){
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.database();
+  stateRef = db.ref(ROOT + "/state");
+  playersRef = db.ref(ROOT + "/players");
+  feedRef = db.ref(ROOT + "/feed");
+  TS = firebase.database.ServerValue.TIMESTAMP;
+}
+const isHost = /proyector/i.test(location.hash) || new URLSearchParams(location.search).has("proyector");
+const JOIN_URL = location.origin + location.pathname;
+
+/* =================== PLAYER =================== */
+let pid = store.get("rg-pid");
+if (!pid){ pid = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36); store.set("rg-pid", pid); }
+const me = { name: store.get("rg-name") || "", fleet: store.get("rg-fleet") || "", raceId:null, taps:0, opened:0, seen:0 };
+let joined = false, hostState = null, pPhase = "none", locked = false, temptTimer = null, lastPush = 0, pushPending = false, countTimer = null;
+const myRef = () => playersRef.child(pid);
+
+function buildPlayer(){
+  $("nameIn").value = me.name;
+  const pick = $("fleetPick");
+  FLEETS.forEach(f => {
+    const b = el("button", "fleetbtn");
+    b.style.setProperty("--c", f.color);
+    const ic = el("span", "icon"); ic.innerHTML = ICONS[f.id];
+    b.append(ic, el("span", null, f.name), el("small", null, f.motto));
+    b.addEventListener("click", () => joinFleet(f.id));
+    pick.append(b);
+  });
+  $("rowIcon").innerHTML = ICONS.oar;
+  $("changeBtn").addEventListener("click", () => { joined = false; show("pGame", false); show("pJoin", true); stopTempt(); });
+  const row = $("rowBtn");
+  row.addEventListener("pointerdown", e => { e.preventDefault(); stroke(); });
+  row.addEventListener("keydown", e => { if (e.key === " " || e.key === "Enter"){ e.preventDefault(); stroke(); } });
+  row.addEventListener("contextmenu", e => e.preventDefault());
+}
+
+function joinFleet(fid){
+  const name = $("nameIn").value.trim();
+  if (!name){ $("nameIn").classList.add("need"); $("nameIn").focus(); return; }
+  $("nameIn").classList.remove("need");
+  me.name = name.slice(0, 24); me.fleet = fid;
+  store.set("rg-name", me.name); store.set("rg-fleet", fid);
+  const f = F[fid];
+  document.querySelector(".pgame").style.setProperty("--c", f.color);
+  $("pIcon").innerHTML = ICONS[fid]; $("pFleet").textContent = f.name; $("pName").textContent = me.name;
+  show("pJoin", false); show("pGame", true);
+  joined = true; pPhase = "none";
+  if (playersRef) myRef().child("online").onDisconnect().set(false);
+  pushMe(true);
+  playerSync();
+}
+
+function doPush(){
+  lastPush = Date.now();
+  if (!playersRef || !joined) return;
+  myRef().set({ name:me.name, fleet:me.fleet, raceId:me.raceId || "", taps:me.taps, opened:me.opened, seen:me.seen, online:true, ts:TS }).catch(() => {});
+}
+function pushMe(now){
+  const wait = 250 - (Date.now() - lastPush);
+  if (now || wait <= 0){ doPush(); return; }
+  if (!pushPending){ pushPending = true; setTimeout(() => { pushPending = false; doPush(); }, wait); }
+}
+
+function playerSync(){
+  if (!joined) return;
+  const h = hostState;
+  if (!h || !h.phase){ setPPhase("nohost", null); return; }
+  if ((h.phase === "countdown" || h.phase === "race") && h.raceId && h.raceId !== me.raceId){
+    me.raceId = h.raceId; me.taps = 0; me.opened = 0; me.seen = 0;
+    updateTaps();
+  }
+  pushMe(true); // reafirma que sigue a bordo (por si vaciaron flotas o hubo reconexión)
+  setPPhase(h.phase, h);
+}
+
+function setPPhase(p, h){
+  if (p === pPhase && p !== "end") return;
+  pPhase = p;
+  const st = $("pStatus");
+  clearInterval(countTimer);
+  $("rowBtn").disabled = (p !== "race") || locked;
+  if (p === "race") startTempt(); else stopTempt();
+  if (p === "nohost") st.textContent = "Esperando a que el proyector abra la regata…";
+  else if (p === "lobby") st.textContent = "Ya estás a bordo. Espera la señal para zarpar.";
+  else if (p === "countdown"){
+    let n = 3; st.innerHTML = ""; const s = el("span", "huge", n); st.append("Prepárense…", s);
+    countTimer = setInterval(() => { n--; s.textContent = n > 0 ? n : "¡Ya!"; if (n <= 0) clearInterval(countTimer); }, 1000);
+  }
+  else if (p === "race") st.textContent = "¡Rema! Y no te distraigas.";
+  else if (p === "end"){
+    const w = h && F[h.winner];
+    st.innerHTML = "";
+    if (w){ const s = el("span", "huge", w.name); s.style.color = w.color; st.append("Ganó la flota", s); }
+    else st.textContent = "Terminó la regata.";
+  }
+}
+
+function updateTaps(){
+  $("pTaps").textContent = me.taps;
+  $("pOpened").textContent = me.opened ? `  ·  ${me.opened} tentaci${me.opened === 1 ? "ón" : "ones"}` : "";
+}
+
+function stroke(){
+  if (pPhase !== "race" || locked) return;
+  me.taps++; updateTaps(); pushMe();
+  const r = $("rowBtn"); r.classList.add("hit"); setTimeout(() => r.classList.remove("hit"), 70);
+  if (navigator.vibrate) { try { navigator.vibrate(8); } catch(e){} }
+}
+
+function startTempt(){ if (!temptTimer) scheduleTempt(800); }
+function stopTempt(){ clearTimeout(temptTimer); temptTimer = null; $("layer").innerHTML = ""; }
+function scheduleTempt(delay){ temptTimer = setTimeout(spawnTempt, delay != null ? delay : 1600 + Math.random() * 2600); }
+
+function spawnTempt(){
+  temptTimer = null;
+  if (pPhase !== "race") return;
+  const layer = $("layer");
+  if (!locked && layer.children.length < 2){
+    const t = TEMPT[Math.floor(Math.random() * TEMPT.length)];
+    const b = el("button", "tempt");
+    b.style.setProperty("--r", (Math.random() * 10 - 5).toFixed(1) + "deg");
+    const top = Math.random() < .55 ? 13 + Math.random() * 18 : 74 + Math.random() * 12;
+    b.style.top = top + "%";
+    b.style.left = (3 + Math.random() * 38) + "%";
+    const txt = el("span"); txt.append(el("span", "t", t.t)); txt.append(document.createElement("br")); txt.append(el("span", "cta", t.c));
+    b.append(el("span", "e", t.e), txt);
+    let gone = false;
+    const remove = () => { if (gone) return; gone = true; b.classList.add("out"); setTimeout(() => b.remove(), 250); };
+    b.addEventListener("pointerdown", e => { e.preventDefault(); if (gone) return; gone = true; b.remove(); openTempt(t); });
+    layer.append(b);
+    me.seen++; pushMe();
+    setTimeout(remove, 2600 + Math.random() * 1200);
+  }
+  scheduleTempt();
+}
+
+function openTempt(t){
+  me.opened++; updateTaps(); pushMe(true);
+  if (feedRef) feedRef.push({ name:me.name, fleet:me.fleet, type:t.type, raceId:me.raceId || "", t:TS }).catch(() => {});
+  locked = true; $("rowBtn").disabled = true;
+  $("lockE").textContent = t.e; $("lockT").textContent = t.h; $("lockX").textContent = t.x;
+  show("lock", true);
+  let s = Math.round(LOCK_MS / 1000); $("lockS").textContent = s;
+  const iv = setInterval(() => { s--; $("lockS").textContent = Math.max(s, 0); }, 1000);
+  setTimeout(() => { clearInterval(iv); locked = false; show("lock", false); $("rowBtn").disabled = pPhase !== "race"; }, LOCK_MS);
+}
+
+/* =================== HOST =================== */
+const H = { phase:"lobby", raceId:"", goal:120, winner:"", startedAt:0 };
+let playersData = {}, feedData = [], clockIv = null, renderQueued = false;
+
+function pushHost(){ if (stateRef) stateRef.set({ ...H, epoch:TS }).catch(() => {}); }
+
+function buildHost(){
+  const crews = $("crews"), lanes = $("lanes");
+  FLEETS.forEach(f => {
+    const c = el("div", "crew"); c.style.setProperty("--c", f.color);
+    const head = el("div", "crew-head"); const ic = el("span", "icon"); ic.innerHTML = ICONS[f.id];
+    const n = el("span", "n", "0"); n.id = "cn-" + f.id;
+    head.append(ic, el("h2", null, f.name), n);
+    const chips = el("div", "chips"); chips.id = "cc-" + f.id;
+    c.append(head, chips); crews.append(c);
+
+    const lane = el("div", "lane"); lane.id = "ln-" + f.id; lane.style.setProperty("--c", f.color);
+    const info = el("div", "lane-info"); const top = el("div", "top"); const ic2 = el("span", "icon"); ic2.innerHTML = ICONS[f.id];
+    top.append(ic2, el("b", null, f.name));
+    const meta = el("div", "meta"); meta.id = "lm-" + f.id;
+    info.append(top, meta);
+    const water = el("div", "water"); water.append(el("div", "finish"));
+    const boat = el("div", "boat"); boat.id = "bt-" + f.id;
+    boat.innerHTML = '<svg viewBox="0 0 80 60" aria-hidden="true"><line x1="40" y1="6" x2="40" y2="40" stroke="#3a2a1c" stroke-width="3"/><path d="M43 8 L68 38 H43 Z" fill="currentColor" stroke="#3a2a1c" stroke-width="1.5"/><path d="M37 13 L17 38 H37 Z" fill="currentColor" opacity=".75" stroke="#3a2a1c" stroke-width="1.5"/><path d="M4 41 H76 L66 55 H14 Z" fill="#5a3a22" stroke="#2b1b10" stroke-width="2"/><path d="M20 47 L8 58 M60 47 L72 58" stroke="#c9a46a" stroke-width="3" stroke-linecap="round"/></svg>';
+    water.append(boat);
+    lane.append(info, water); lanes.append(lane);
+  });
+  $("goalSel").addEventListener("change", e => { H.goal = parseInt(e.target.value, 10) || 120; pushHost(); queueRender(); });
+  $("startBtn").addEventListener("click", startRace);
+  $("endBtn").addEventListener("click", finishRace);
+  $("resetBtn").addEventListener("click", resetRace);
+  $("clearBtn").addEventListener("click", () => {
+    if (!confirm("¿Vaciar las flotas? Quien siga con la página abierta volverá a aparecer.")) return;
+    if (playersRef) playersRef.remove().then(() => pushHost());
+  });
+  drawQR(JOIN_URL);
+}
+
+function drawQR(url){
+  const box = $("qr"); box.innerHTML = "";
+  if (window.QRCode){
+    new window.QRCode(box, { text:url, width:560, height:560, colorDark:"#062234", colorLight:"#ffffff", correctLevel:window.QRCode.CorrectLevel.M });
+    box.removeAttribute("title");
+    $("qrHint").textContent = url.replace(/^https?:\/\//, "");
+  } else {
+    box.textContent = url; $("qrHint").textContent = "Comparte este enlace.";
+  }
+}
+
+function players(){
+  return Object.entries(playersData || {}).map(([id, p]) => ({ id, presence: p || {} }))
+    .filter(p => F[p.presence.fleet] && typeof p.presence.name === "string");
+}
+
+function stats(){
+  const inRace = !!H.raceId && H.phase !== "lobby";
+  const all = players();
+  return FLEETS.map(f => {
+    const crew = all.filter(p => p.presence.fleet === f.id && (inRace ? p.presence.raceId === H.raceId : p.presence.online === true));
+    let taps = 0, opened = 0, seen = 0;
+    crew.forEach(p => { taps += num(p.presence.taps); opened += num(p.presence.opened); seen += num(p.presence.seen); });
+    const score = Math.max(0, taps - PEN * opened);
+    const progress = crew.length ? Math.min(1, score / (crew.length * H.goal)) : 0;
+    const focus = seen ? Math.max(0, 1 - opened / seen) : 1;
+    return { f, crew, members:crew.length, taps, opened, seen, score, progress, focus };
+  });
+}
+
+function queueRender(){ if (renderQueued) return; renderQueued = true; requestAnimationFrame(() => { renderQueued = false; renderHost(); }); }
+
+function renderHost(){
+  const ph = H.phase;
+  show("lobby", ph === "lobby"); show("race", ph !== "lobby");
+  show("startBtn", ph === "lobby"); show("clearBtn", ph === "lobby");
+  show("endBtn", ph === "race"); show("resetBtn", ph === "end" || ph === "race");
+  $("goalSel").value = String(H.goal); $("goalSel").disabled = ph !== "lobby";
+  show("clock", ph === "race" || ph === "end");
+  const S = stats();
+  if (ph === "lobby"){
+    const total = S.reduce((a, s) => a + s.members, 0);
+    $("hostSub").textContent = total ? `${total} a bordo. Cuando estén todos, presiona Zarpar.` : "Escanea el código, elige tu flota y espera la señal.";
+    S.forEach(s => {
+      $("cn-" + s.f.id).textContent = s.members;
+      const chips = $("cc-" + s.f.id);
+      const names = s.crew.map(p => String(p.presence.name).slice(0,24)).sort((a,b) => a.localeCompare(b, "es"));
+      const key = names.join("|");
+      if (chips.dataset.k === key) return;
+      chips.dataset.k = key; chips.innerHTML = "";
+      if (!names.length) chips.append(el("p", "empty", "Nadie a bordo todavía"));
+      names.forEach(n => chips.append(el("span", "chip", n)));
+    });
+    return;
+  }
+  $("hostSub").textContent = ph === "race" ? "Gana la flota que más rema y menos se distrae." : ph === "countdown" ? "Prepárense…" : "Regata terminada.";
+  const lead = Math.max(...S.map(s => s.progress));
+  S.forEach(s => {
+    $("bt-" + s.f.id).style.setProperty("--p", s.progress.toFixed(4));
+    $("ln-" + s.f.id).classList.toggle("lead", lead > 0 && s.progress === lead);
+    const m = $("lm-" + s.f.id); m.innerHTML = "";
+    m.append(el("strong", null, s.members), ` remero${s.members === 1 ? "" : "s"}, `, el("strong", null, s.score), " remadas");
+    if (s.opened){ m.append(document.createElement("br")); m.append(el("span", "warn", `${s.opened} tentaci${s.opened === 1 ? "ón abierta" : "ones abiertas"}`)); }
+  });
+  const fl = $("feed"); fl.innerHTML = "";
+  const items = feedData.filter(it => it.raceId === H.raceId && F[it.fleet]).slice(-12).reverse();
+  if (!items.length) fl.append(el("li", "empty", ph === "race" ? "Nadie ha caído en la tentación… todavía." : "Sin tentaciones."));
+  items.forEach(it => {
+    const t = TEMPT.find(x => x.type === it.type) || TEMPT[0];
+    const li = el("li"); li.style.setProperty("--c", F[it.fleet].color);
+    li.append(el("span", "e", t.e));
+    const tx = el("span"); tx.append(el("span", "who", String(it.name).slice(0,24)), ` (${F[it.fleet].name}) ${VERB[it.type] || "se distrajo"}`);
+    li.append(tx); fl.append(li);
+  });
+  if (ph === "race" && S.some(s => s.progress >= 1)) finishRace();
+}
+
+function startRace(){
+  H.raceId = "r" + Date.now().toString(36); H.phase = "countdown"; H.winner = ""; H.startedAt = 0;
+  if (feedRef) feedRef.remove();
+  pushHost(); queueRender();
+  show("count", true);
+  let n = 3; $("countN").textContent = n;
+  const iv = setInterval(() => {
+    n--;
+    if (n > 0){ $("countN").textContent = n; return; }
+    clearInterval(iv);
+    $("countN").textContent = "¡A remar!";
+    H.phase = "race"; H.startedAt = Date.now(); pushHost(); queueRender();
+    startClock();
+    setTimeout(() => show("count", false), 700);
+  }, 1000);
+}
+
+function startClock(){
+  clearInterval(clockIv);
+  const tick = () => { const s = Math.max(0, Math.floor((Date.now() - H.startedAt) / 1000)); $("clock").textContent = `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`; };
+  tick(); clockIv = setInterval(tick, 500);
+}
+
+function finishRace(){
+  if (H.phase !== "race") return;
+  clearInterval(clockIv);
+  const S = stats().sort((a,b) => b.progress - a.progress || b.focus - a.focus);
+  const w = S[0] && S[0].members && S[0].progress > 0 ? S[0] : null;
+  H.phase = "end"; H.winner = w ? w.f.id : ""; pushHost();
+  renderHost(); renderPodium(S, w);
+}
+
+function renderPodium(S, w){
+  const pod = $("podium"); pod.innerHTML = "";
+  const card = el("div", "podium-card"); card.style.setProperty("--c", w ? w.f.color : "#cfdde3");
+  card.append(el("h2", null, w ? `¡Ganó la flota ${w.f.name}!` : "Terminó la regata"));
+  const withCrew = S.filter(s => s.members);
+  const focused = withCrew.slice().sort((a,b) => b.focus - a.focus || b.progress - a.progress)[0];
+  const tempted = withCrew.reduce((a, s) => a + s.opened, 0);
+  card.append(el("p", "sub", focused
+    ? `Flota más concentrada: ${focused.f.name} (${Math.round(focused.focus*100)} % de tentaciones ignoradas). En total se abrieron ${tempted} tentaciones.`
+    : "Nadie remó en esta regata."));
+  const wrap = el("div", "tablewrap"); const tb = el("table");
+  const hr = el("tr"); ["Flota","Remeros","Remadas efectivas","Tentaciones abiertas","Concentración","Avance"].forEach(h => hr.append(el("th", null, h)));
+  const thead = el("thead"); thead.append(hr); tb.append(thead);
+  const body = el("tbody");
+  S.forEach(s => {
+    const tr = el("tr"); tr.style.setProperty("--c", s.f.color);
+    const td = el("td"); td.append(el("span", "sw"), s.f.name); tr.append(td);
+    [s.members, s.score, s.opened, s.members ? Math.round(s.focus*100) + " %" : "—", Math.round(s.progress*100) + " %"].forEach(v => tr.append(el("td", null, v)));
+    body.append(tr);
+  });
+  tb.append(body); wrap.append(tb); card.append(wrap);
+  const acts = el("div", "acts");
+  const again = el("button", "btn go", "Otra regata"); again.addEventListener("click", () => { pod.hidden = true; resetRace(); startRace(); });
+  const dock = el("button", "btn alt", "Volver al muelle"); dock.addEventListener("click", () => { pod.hidden = true; resetRace(); });
+  const close = el("button", "btn alt", "Ver la pista"); close.addEventListener("click", () => { pod.hidden = true; });
+  acts.append(again, dock, close); card.append(acts);
+  pod.append(card); pod.hidden = false;
+}
+
+function resetRace(){
+  clearInterval(clockIv); show("podium", false); show("count", false);
+  H.phase = "lobby"; H.raceId = ""; H.winner = ""; H.startedAt = 0;
+  pushHost(); queueRender();
+}
+
+/* =================== ARRANQUE =================== */
+function startHost(){
+  show("player", false); show("host", true);
+  buildHost();
+  if (!configured){ notice("Falta pegar la configuración de Firebase en el archivo (busca PEGA_AQUI)."); renderHost(); return; }
+  stateRef.once("value").then(snap => {
+    const v = snap.val();
+    if (v && v.phase){
+      H.phase = v.phase === "countdown" ? "lobby" : v.phase; H.raceId = v.raceId || ""; H.goal = v.goal || 120; H.winner = v.winner || ""; H.startedAt = v.startedAt || 0;
+      if (H.phase === "race") startClock();
+    }
+    pushHost(); queueRender();
+  });
+  playersRef.on("value", s => { playersData = s.val() || {}; queueRender(); });
+  feedRef.on("value", s => { const v = s.val() || {}; feedData = Object.values(v).sort((a,b) => num(a.t) - num(b.t)); queueRender(); });
+}
+
+function startPlayer(){
+  show("host", false); show("player", true);
+  buildPlayer();
+  if (!configured){ notice("Este juego aún no está conectado. Pídele a quien lo organiza que revise la configuración."); return; }
+  stateRef.on("value", s => { hostState = s.val(); playerSync(); });
+  db.ref(".info/connected").on("value", s => {
+    if (s.val() === true && joined){ myRef().child("online").onDisconnect().set(false); pushMe(true); }
+  });
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && joined) pushMe(true); });
+  if (me.name && me.fleet && F[me.fleet]) joinFleet(me.fleet);
+}
+
+if (isHost) startHost(); else startPlayer();
+})();
+</script>
+</body>
+</html>
